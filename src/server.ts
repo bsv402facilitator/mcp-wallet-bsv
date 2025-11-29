@@ -265,6 +265,17 @@ export function createServer(): Server {
         description: 'Guía completa sobre cómo usar las preferencias de accesibilidad en pagos X402',
         arguments: [],
       },
+      {
+        name: 'pay-x402-resource',
+        description: 'Asistente interactivo para pagar recursos protegidos con X402. Inspecciona headers, crea el pago y consume el recurso.',
+        arguments: [
+          {
+            name: 'resourceUrl',
+            description: 'URL del recurso protegido con X402 (ej: https://api.example.com/data)',
+            required: true,
+          },
+        ],
+      },
     ],
   }));
 
@@ -411,6 +422,125 @@ Si NO incluyes preferencias, el sistema usa defaults sensatos:
 - audioFriendly: true
 
 Esto asegura que todos los usuarios reciban respuestas accesibles por defecto.`,
+            },
+          },
+        ],
+      };
+    }
+
+    if (name === 'pay-x402-resource') {
+      const { resourceUrl } = request.params.arguments as { resourceUrl?: string };
+
+      if (!resourceUrl) {
+        throw new Error('Se requiere el parámetro resourceUrl');
+      }
+
+      return {
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: `# Asistente de Pago X402
+
+Voy a ayudarte a acceder al recurso protegido con X402 en:
+**${resourceUrl}**
+
+## Paso 1: Inspeccionar el Recurso
+
+Primero, necesito que uses curl para inspeccionar los headers de pago requeridos:
+
+\`\`\`bash
+curl -v "${resourceUrl}"
+\`\`\`
+
+Analiza la respuesta y busca:
+- **Status Code**: Debería ser 402 Payment Required
+- **Header X-Amount**: Cantidad requerida en satoshis
+- **Header X-BSV-Address**: Dirección BSV del merchant
+- **Header X-Facilitator-URL**: URL del facilitador X402 (opcional)
+- **Body**: Mensaje de error con instrucciones de pago
+
+## Paso 2: Preparar la Información
+
+Una vez inspeccionado el recurso, extrae:
+1. **Monto requerido** (del header X-Amount o del body)
+2. **Dirección del merchant** (del header X-BSV-Address o del body)
+3. **Network** (testnet o mainnet - infiere del formato de la dirección)
+4. **Facilitator URL** (si está presente en los headers)
+
+## Paso 3: Listar Wallets Disponibles
+
+Ejecuta el tool \`manage_wallets\` con operation='list' para ver tus wallets disponibles:
+- Identifica una wallet en la red correcta (testnet/mainnet)
+- Verifica que tenga fondos suficientes con \`get_balance\`
+
+## Paso 4: Crear el Pago X402
+
+Usa el tool \`create_x402_payment\` con la información recolectada:
+
+\`\`\`typescript
+create_x402_payment({
+  walletId: "tu-wallet-id",
+  password: "tu-password",
+  payTo: "dirección-del-merchant",
+  amount: monto-requerido,
+  network: "testnet", // o "mainnet"
+  facilitatorUrl: "url-del-facilitador", // opcional
+  language: "es",
+  cognitiveLevel: "simple"
+})
+\`\`\`
+
+El resultado incluirá:
+- **payload**: Payload X402 en base64
+- **usageInstructions**: Instrucciones de cómo usar el payload
+
+## Paso 5: Consumir el Recurso con Pago
+
+Usa curl para enviar el pago y obtener el recurso:
+
+\`\`\`bash
+curl -X POST "${resourceUrl}" \\
+  -H "Content-Type: application/json" \\
+  -H "X-Payment-Protocol: x402" \\
+  -d '{"payment": "PAYLOAD_BASE64_AQUI"}'
+\`\`\`
+
+O si el API usa headers:
+
+\`\`\`bash
+curl "${resourceUrl}" \\
+  -H "X-Payment: PAYLOAD_BASE64_AQUI" \\
+  -H "X-Payment-Protocol: x402"
+\`\`\`
+
+## Paso 6: Verificar Resultado
+
+El servidor debería:
+- Retornar status 200 OK
+- Incluir el recurso solicitado en el body
+- Opcionalmente, incluir headers de confirmación
+
+Si recibes errores:
+- **400 Bad Request**: Formato de pago incorrecto
+- **402 Payment Required**: Pago insuficiente o inválido
+- **500 Server Error**: Error del servidor procesando el pago
+
+---
+
+## Modo Automatizado
+
+Si prefieres, puedo ejecutar todo el flujo automáticamente:
+1. Inspecciono la URL con curl
+2. Extraigo la información de pago
+3. Listo tus wallets
+4. Pregunto cuál wallet usar y el password
+5. Creo el pago X402
+6. Consumo el recurso
+7. Muestro el resultado
+
+¿Quieres proceder en modo manual (paso a paso) o automático?`,
             },
           },
         ],

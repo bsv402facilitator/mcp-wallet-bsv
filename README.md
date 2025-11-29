@@ -217,6 +217,29 @@ Fetch current BSV market price.
 
 **Cache**: 3-minute TTL for API efficiency
 
+### MCP Prompts
+
+The server provides interactive prompts to guide common workflows:
+
+#### `/pay-x402-resource <url>`
+Interactive assistant for consuming X402-protected resources. Automatically guides you through:
+1. Inspecting resource payment requirements via curl
+2. Extracting payment details (amount, merchant address, network)
+3. Selecting appropriate wallet with sufficient funds
+4. Creating X402 payment payload
+5. Consuming the protected resource
+6. Verifying successful payment and access
+
+**Example**:
+```
+/pay-x402-resource https://api.example.com/premium-data
+```
+
+The prompt offers both manual (step-by-step) and automated modes, making it easy to interact with any X402-protected API endpoint.
+
+#### `/accessibility-guide`
+Comprehensive guide on using accessibility features in X402 payments, including language preferences, cognitive level adaptation, and screen reader optimization.
+
 ---
 
 ## Security
